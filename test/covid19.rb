@@ -109,6 +109,43 @@ class Covid19
       end
     end
   end
+
+  def list_status_confirmed_wuhanviruskr
+    doc = Oga.parse_html(open("https://wuhanvirus.kr", encoding: Encoding::UTF_8))
+    headers = [ %w(# 국적 정보 차수 감염경로), %w(확진 접촉 상태 격리시설) ]
+    infos = []
+    doc.css("#patient-log-table > table > tbody > tr.summary.first").each do |person|
+      infos << Hash[headers[0].zip(person.css("td").map{ |x| x.text })]
+    end
+    doc.css("#patient-log-table > table > tbody > tr.summary.second").each_with_index do |person, idx|
+      infos[idx].merge!( Hash[headers[1].zip(person.css("td").map{ |x| x.text }[1..-1])] )
+    end
+    infos
+  end
+
+  def list_the_confirmed_wuhanviruskr_to_csv(filename: )
+    headers = %w(# 국적 정보 차수 감염경로 확진 접촉 상태 격리시설)
+    CSV.open(filename, "w", write_headers: true, headers: headers) do |csv|
+      list_status_confirmed_wuhanviruskr.reverse_each{ |x| csv << x }
+    end
+  end
+
+  def list_routes_of_the_confirmed_wuhanviruskr_to_file(foldername: )
+    doc = Oga.parse_html(open("https://wuhanvirus.kr", encoding: Encoding::UTF_8))
+    headers = [ %w(# 국적 정보 차수 감염경로), %w(확진 접촉 상태 격리시설) ]
+    infos = []
+    doc.css("#patient-log-table > table > tbody > tr.summary.first").each do |person|
+      infos << { no: person.css("td").map{ |x| x.text }[0] }
+    end
+    doc.css("#patient-log-table > table > tbody > tr.description").each_with_index do |person, idx|
+      infos[idx][:routes] = person.css("td > div > ul > li").map{ |x| x.text }
+    end
+    infos.reverse_each do |x|
+      File.open("#{foldername}/#{x[:no][1..-1]}.txt", "w") do |f|
+        x[:routes].each{ |r| f.puts r }
+      end
+    end
+  end
 end
 
 if ARGV.length > 0
@@ -116,10 +153,14 @@ if ARGV.length > 0
   @covid.list_the_confirmed_to_csv(from: 1, to: @covid.last_confirmed_person_id, filename: "covid19-confirmed-list-kr.csv") if ARGV[0].include? "c"
   @covid.list_routes_of_the_confirmed_to_file(from: 1, to: @covid.last_confirmed_person_id, foldername: "routes") if ARGV[0].include? "r"
   @covid.list_clinics_to_csv(filename: "covid19-clinic-list-kr.csv") if ARGV[0].include? "k"
+  @covid.list_the_confirmed_wuhanviruskr_to_csv(filename: "covid19-confirmed-list-wuhanviruskr.csv") if ARGV[0].include? "w"
+  @covid.list_routes_of_the_confirmed_wuhanviruskr_to_file(foldername: "wuhanviruskr")  if ARGV[0].include? "t"
 else
   puts "ruby covid19.rb c|r|k"
   puts "c: list the confirmed"
   puts "r: list routes of the confirmed"
   puts "k: list clinics"
+  puts "w: list the confirmed from wuhanvirus.kr"
+  puts "t: list routes of the confirmed from wuhanvirus.kr"
 end
 

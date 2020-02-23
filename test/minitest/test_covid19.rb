@@ -25,8 +25,11 @@ class TestCovid19 < Minitest::Test
     assert @covid.list_clinics
   end
 
+  def test_list_status_confirmed_wuhanviruskr
+    assert @covid.list_status_confirmed_wuhanviruskr
+  end
+
   def test_run
-    skip
     # puts @covid.status_confirmed(person_id: 1)
     # puts @covid.route_confirmed(person_id: 1)
     # @covid.list_the_confirmed(from: 1, to: @covid.last_confirmed_person_id)
@@ -36,6 +39,10 @@ class TestCovid19 < Minitest::Test
     # @covid.list_routes_of_the_confirmed_to_file(from: 1, to: 3, foldername: "routes")
 
     # @covid.list_clinics_to_csv(filename: "a.csv")
+
+    # @covid.list_the_confirmed_wuhanviruskr_to_csv(filename: "a.csv")
+    # @covid.list_routes_of_the_confirmed_wuhanviruskr
+    # @covid.list_routes_of_the_confirmed_wuhanviruskr_to_file(foldername: "wuhanviruskr")
   end
 
 end
