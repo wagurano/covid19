@@ -57,6 +57,25 @@ class TestMaskStore < Minitest::Test
     assert @maskstore.local_list_to_file(filename: "a.txt")
   end
 
+  def test_find_by_geo
+    skip
+    # assert_equal "https://app.swaggerhub.com/proxy?proxy-token=nehbixc&url=https%3A%2F%2F8oi9s0nnth.apigw.ntruss.com%2Fcorona19-masks%2Fv1%2FstoresByGeo%2Fjson%3Flat%3D37.5698424359%26lng%3D126.9780944774%26m%3D1000", @maskstore.find_by_geo(latitude: 37.5698424359, longitude: 126.9780944774)
+    # assert_equal JSON.parse('{ "count": 45 }')["count"], @maskstore.find_by_geo(latitude: 37.5698424359, longitude: 126.9780944774)["count"]
+    assert @maskstore.find_by_geo(latitude: 37.5698424359, longitude: 126.9780944774)
+  end
+
+  def test_maskstore_geo_list
+    skip
+    assert @maskstore.maskstore_geo_list_to_csv(filename: "a.csv")
+  end
+
+  def test_maskstore_geo_to_utm
+    skip
+    # assert_equal ["37.4819251305595", "127.057440206035"], @maskstore.geo_to_utm(filename: "geolocal.csv")
+    # assert_equal [4150108.17601028, 328246.99697792367], @maskstore.geo_to_utm(filename: "geolocal.csv")
+    # assert_equal [4150108.17601028, 328246.99697792367], @maskstore.geo_to_utm(input_filename: "geolocal.csv", output_filename: "utm_geolocal.csv")
+  end
+
   def test_run
     # assert @maskstore.nh_districts
     # assert @maskstore.nh_hanaro_list
@@ -64,7 +83,8 @@ class TestMaskStore < Minitest::Test
     # assert @maskstore.postoffice_list_to_csv(filename: "a.csv")
     # assert @maskstore.pharmacy_by_geo_to_csv(filename: "a.csv")
     # assert @maskstore.pharmacy_from(filename: "a.csv")
-    assert @maskstore.pharmacy_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
+    # assert @maskstore.pharmacy_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
+    assert @maskstore.sample_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
   end
 
 end

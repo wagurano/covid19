@@ -1,9 +1,11 @@
 require "open-uri"
 require "net/http"
+require "cgi"
 require "oga"
 require "csv"
 require "json"
 require "set"
+require "geoutm"
 
 class MaskStore
   NH_PROVINCE_CODES = %w(11 26 27 28 29 30 31 36 41 42 43 44 45 46 47 48 50)
@@ -23,6 +25,10 @@ class MaskStore
   PH_DISTRICT_URL = "https://www.e-gen.or.kr/common_code/gugun_code_list.do?code="
   PH_LOCAL_URL = "https://www.e-gen.or.kr/common_code/dong_code_list.do?code="
   PHARMACY_LIST_URL = "http://www.e-gen.or.kr/egen/retrieve_pharmacy_list.do?lat=:latitude&lon=:longitude&emogdesc=&day=&holidayY=&radius=3&order=distance&currentPageNum=:pagenumber"
+
+  PROXY_URL = "https://app.swaggerhub.com/proxy?proxy-token=nehbixc&url="
+  MASKSTORE_GEO_URL = "https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByGeo/json?lat=:latitude&lng=:longitude&m=:radius"
+  MASKSTORE_GEO_HEADERS = %w(code name addr lat lng created_at remain_cnt sold_cnt sold_out stock_cnt stock_t type)
 
   def list_nh_provinces 
     NH_PROVINCE_CODES.each do |province|
@@ -282,6 +288,24 @@ class MaskStore
     end
   end
 
+  def sample_list_to_csv(input_filename:, output_filename:)
+    count = 1
+    sample_set = Set.new
+    File.open(output_filename, "w") do |f|
+      f.puts MASKSTORE_GEO_HEADERS.join(",")
+      CSV.foreach(input_filename, headers: true) do |sample|
+	unless sample_set.include? sample['code']
+	  sample_set.add(sample['id'])
+	  f.puts MASKSTORE_GEO_HEADERS.map{ |key| sample[key] }.join(",")
+          print "." if sample_set.size % 100 == 0
+          puts if sample_set.size % 8_000 == 0
+	end
+	count += 1
+      end
+      print count, ",", sample_set.size; puts
+    end
+  end
+
   def local_list
     list = []
     districts = {}
@@ -307,6 +331,51 @@ class MaskStore
     end
   end
 
+  def find_by_geo(latitude:, longitude:)
+    jsonstring = ""
+    open(MASKSTORE_GEO_URL.gsub(/:latitude/,latitude.to_s).gsub(/:longitude/,longitude.to_s).gsub(/:radius/,"1000")) do |f|
+      f.each_line{ |x| jsonstring << x }
+    end
+    JSON.parse(jsonstring)
+  end
+
+  def maskstore_geo_list_to_csv(filename:)
+    count = 1
+    CSV.open(filename, "w", write_headers: true, headers: MASKSTORE_GEO_HEADERS) do |csv|
+      CSV.foreach("geolocal.csv", headers: true) do |local|
+        puts local.inspect
+        retry_count = 0
+        begin 
+          find_by_geo(latitude: local["latitude"], longitude: local["longitude"])["stores"].each do |store|
+            csv << store
+          end
+        rescue Exception => e
+          sleep 0.2
+          retry_count += 1 
+          retry if retry_count < 5
+          puts local["name"], e.message
+        end
+        count += 1
+      end
+    end
+  end
+
+  def geo_to_utm(input_filename:, output_filename:)
+    out = []
+    headers = nil
+    File.open(input_filename){ |f| headers = f.readline.strip.split(',') }
+    headers << "north" << "east"
+    CSV.open(output_filename, "w", write_headers: true, headers: headers) do |csv|
+      CSV.foreach(input_filename, headers: true) do |local|
+        info = local.to_hash
+        utm = GeoUtm::LatLon.new(local['latitude'].to_f, local['longitude'].to_f).to_utm
+        info['north'], info['east'] = utm.n, utm.e
+        csv << info
+      end
+    end
+    out
+  end
+
 end
 
 if ARGV.length > 0
@@ -314,10 +383,12 @@ if ARGV.length > 0
   @maskstore.nh_hanaro_list_to_csv(filename: "maskstore-nh-hanaro.csv") if ARGV[0].include? "n"
   @maskstore.postoffice_list_to_csv(filename: "maskstore-postoffice.csv") if ARGV[0].include? "p"
   @maskstore.pharmacy_list_to_csv(input_filename: "maskstore-pharmacy-by-geo.csv", output_filename: "maskstore-pharmacy.csv") if ARGV[0].include? "h"
+  @maskstore.maskstore_geo_list_to_csv(filename: "maskstore-geo.csv") if ARGV[0].include? "m"
 else
   puts "ruby maskstore.rb n|p"
   puts "n: list nonhyup hanaro mart"
   puts "p: list postoffice"
   puts "h: list pharmacy"
+  puts "m: list maskstore-geo"
 end
 
