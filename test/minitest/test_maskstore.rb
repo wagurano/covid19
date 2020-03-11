@@ -61,12 +61,12 @@ class TestMaskStore < Minitest::Test
     skip
     # assert_equal "https://app.swaggerhub.com/proxy?proxy-token=nehbixc&url=https%3A%2F%2F8oi9s0nnth.apigw.ntruss.com%2Fcorona19-masks%2Fv1%2FstoresByGeo%2Fjson%3Flat%3D37.5698424359%26lng%3D126.9780944774%26m%3D1000", @maskstore.find_by_geo(latitude: 37.5698424359, longitude: 126.9780944774)
     # assert_equal JSON.parse('{ "count": 45 }')["count"], @maskstore.find_by_geo(latitude: 37.5698424359, longitude: 126.9780944774)["count"]
-    assert @maskstore.find_by_geo(latitude: 37.5698424359, longitude: 126.9780944774)
+    assert_equal %w(addr code created_at lat lng name remain_stat stock_at type), @maskstore.find_by_geo(latitude: 37.5698424359, longitude: 126.9780944774)['stores'].first.keys
   end
 
   def test_maskstore_geo_list
     skip
-    assert @maskstore.maskstore_geo_list_to_csv(filename: "a.csv")
+    # assert @maskstore.maskstore_geo_list_to_csv(filename: "a.csv")
   end
 
   def test_maskstore_geo_to_utm
@@ -84,7 +84,8 @@ class TestMaskStore < Minitest::Test
     # assert @maskstore.pharmacy_by_geo_to_csv(filename: "a.csv")
     # assert @maskstore.pharmacy_from(filename: "a.csv")
     # assert @maskstore.pharmacy_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
-    assert @maskstore.sample_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
+    # assert @maskstore.sample_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
+    assert @maskstore.maskstore_geo_list_to_csv(filename: "a.csv")
   end
 
 end

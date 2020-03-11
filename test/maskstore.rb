@@ -28,7 +28,7 @@ class MaskStore
 
   PROXY_URL = "https://app.swaggerhub.com/proxy?proxy-token=nehbixc&url="
   MASKSTORE_GEO_URL = "https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByGeo/json?lat=:latitude&lng=:longitude&m=:radius"
-  MASKSTORE_GEO_HEADERS = %w(code name addr lat lng created_at remain_cnt sold_cnt sold_out stock_cnt stock_t type)
+  MASKSTORE_GEO_HEADERS = %w(type code name addr lat lng remain_stat stock_at created_at)
 
   def list_nh_provinces 
     NH_PROVINCE_CODES.each do |province|
