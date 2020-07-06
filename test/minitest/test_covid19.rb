@@ -22,10 +22,16 @@ class TestCovid19 < Minitest::Test
   end
 
   def test_list_clinics
+    skip
     assert @covid.list_clinics
   end
 
+  def test_to_geo
+    assert @covid.to_geo
+  end
+
   def test_list_status_confirmed_wuhanviruskr
+    skip
     assert @covid.list_status_confirmed_wuhanviruskr
   end
 

@@ -436,11 +436,14 @@ if ARGV.length > 0
   if ARGV[0].include? "s"
     @maskstore.stock_list_to_csv(filename: ARGV[1] || "stock.csv")
   end
+  @maskstore.maskstore_list_to_csv(filename: "maskstore-all.csv") if ARGV[0].include? "a"
 else
   puts "ruby maskstore.rb n|p"
   puts "n: list nonhyup hanaro mart"
   puts "p: list postoffice"
   puts "h: list pharmacy"
   puts "m: list maskstore-geo"
+  puts "s: log sales"
+  puts "a: list maskstore-all"
 end
 

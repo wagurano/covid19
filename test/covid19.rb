@@ -1,11 +1,15 @@
+require "net/http"
 require "open-uri"
 require "oga"
 require "csv"
+require "cgi"
+require "json"
 
 class Covid19
   CONFIRMED_PERSON_URL = "http://ncov.mohw.go.kr/bdBoardList.do?pageIndex=&ncv_file_seq=&file_path=&file_name=&brdId=1&brdGubun=12&search_item=1&search_content="
-  CLINICS_URL = "http://www.mohw.go.kr/react/popup_200128.html"
+  CLINICS_URL = "http://www.mohw.go.kr/react/popup_200128_3.html"
   SAMPLING = "*(검체채취 가능)"
+  CLINIC_LOCATION_URL = "http://dapi.kakao.com/v2/local/search/address.json?query="
   STATUS_HEADERS = {
     ko: %w(환자 인적사항 감염경로 확진일자 입원기관 접촉자수(격리조치중)),
     en: %w(id desc infection confirmed_at hospital contact) 
@@ -14,7 +18,6 @@ class Covid19
     ko: %w(연번 시도 시군구 선별진료소 전화번호 검체가능),
     en: %w(id province district clinic phone sampling)
   }
-  
   
   def status_confirmed(person_id: )
     doc = Oga.parse_html(open("#{CONFIRMED_PERSON_URL}#{person_id}"))
@@ -72,6 +75,25 @@ class Covid19
     end
   end
 
+  def list_clinics_old
+    doc = Oga.parse_html(open(CLINICS_URL, encoding: Encoding::UTF_8))
+    clinics = []
+    count = 1
+    doc.css(".tb_center > tr").each do |row|
+      clinic = [count] 
+      row.css("td").each{ |x| clinic << x.text }
+      if clinic[3].include? SAMPLING
+        clinic[3].gsub!(SAMPLING,'').strip!
+        clinic << "Y"
+      else
+        clinic << "N"
+      end
+      clinics << Hash[CLINIC_HEADERS[:ko].zip(clinic)]
+      count += 1
+    end
+    clinics
+  end
+
   def list_clinics
     doc = Oga.parse_html(open(CLINICS_URL, encoding: Encoding::UTF_8))
     clinics = []
@@ -89,6 +111,20 @@ class Covid19
       count += 1
     end
     clinics
+  end
+
+  def address_to_geo
+    File.foreach('address.list') do |line|
+      url = CLINIC_LOCATION_URL + CGI.escape(line)
+      uri = URI(url)
+      req = Net::HTTP::Get.new(uri)
+      req['KA'] = "sdk/4.1.9 os/javascript lang/ko-KR device/MacIntel origin/http%3A%2F%2Fmohw.go.kr"
+      req['Authorization'] = "KakaoAK 0a229229b783e6330fc2e6e9a459c730"
+      res = Net::HTTP.start(uri.hostname, uri.port){ |http| http.request(req) }
+      loc = JSON.parse(res.body)['documents'][0]
+      print loc['y'], ",", loc['x']
+      puts
+    end
   end
 
   def list_clinics_to_csv(filename:) 
@@ -155,6 +191,7 @@ if ARGV.length > 0
   @covid.list_clinics_to_csv(filename: "covid19-clinic-list-kr.csv") if ARGV[0].include? "k"
   @covid.list_the_confirmed_wuhanviruskr_to_csv(filename: "covid19-confirmed-list-wuhanviruskr.csv") if ARGV[0].include? "w"
   @covid.list_routes_of_the_confirmed_wuhanviruskr_to_file(foldername: "wuhanviruskr")  if ARGV[0].include? "t"
+  @covid.address_to_geo if ARGV[0].include? "g"
 else
   puts "ruby covid19.rb c|r|k"
   puts "c: list the confirmed"
@@ -163,4 +200,5 @@ else
   puts "w: list the confirmed from wuhanvirus.kr"
   puts "t: list routes of the confirmed from wuhanvirus.kr"
 end
+
 
