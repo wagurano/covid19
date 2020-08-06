@@ -1,0 +1,2 @@
+cd WORKING_DIRECTORY
+RUBY_PATH/ruby test/maskstore.rb m maskstore-`TZ='Asia/Seoul' date +%Y%m%d%H%M%S`.csv

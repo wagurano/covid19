@@ -76,6 +76,16 @@ class TestMaskStore < Minitest::Test
     # assert_equal [4150108.17601028, 328246.99697792367], @maskstore.geo_to_utm(input_filename: "geolocal.csv", output_filename: "utm_geolocal.csv")
   end
 
+  def test_maskstores
+    skip
+    assert @maskstore.maskstores(page_no: 1, store_count: 500)
+  end
+
+  def test_stocks
+    skip
+    assert @maskstore.stocks(page_no: 1, store_count: 500)
+  end
+
   def test_run
     # assert @maskstore.nh_districts
     # assert @maskstore.nh_hanaro_list
@@ -85,7 +95,9 @@ class TestMaskStore < Minitest::Test
     # assert @maskstore.pharmacy_from(filename: "a.csv")
     # assert @maskstore.pharmacy_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
     # assert @maskstore.sample_list_to_csv(input_filename: "a.csv", output_filename: "b.csv")
-    assert @maskstore.maskstore_geo_list_to_csv(filename: "a.csv")
+    # assert @maskstore.maskstore_geo_list_to_csv(filename: "a.csv")
+    # assert @maskstore.maskstore_list_to_csv(filename: 'a.csv')
+    assert @maskstore.stock_list_to_csv(filename: 'a.csv')
   end
 
 end

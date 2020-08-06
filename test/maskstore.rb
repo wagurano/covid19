@@ -30,7 +30,13 @@ class MaskStore
   MASKSTORE_GEO_URL = "https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByGeo/json?lat=:latitude&lng=:longitude&m=:radius"
   MASKSTORE_GEO_HEADERS = %w(type code name addr lat lng remain_stat stock_at created_at)
 
-  def list_nh_provinces 
+  MASKSTORES_URL = "https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/stores/json?page=:page_no&perPage=:store_count"
+  MASKSTORE_HEADERS = %w(type code name addr lat lng)
+  MASKSTORE_STOCKS_URL = "https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/sales/json?page=:page_no&perPage=:store_count"
+  MASKSTORE_STOCK_HEADERS = %w(code remain_stat stock_at created_at)
+
+
+  def list_nh_provinces
     NH_PROVINCE_CODES.each do |province|
       puts province
       open("#{NH_DISTRICTS_URL}#{province}") do |f|
@@ -55,7 +61,7 @@ class MaskStore
     districts = []
     NH_PROVINCE_CODES.each do |province|
       open("#{NH_DISTRICTS_URL}#{province}") do |f|
-        f.each_line do |line| 
+        f.each_line do |line|
           nh_parse_list(line).each{ |x| districts << { province_id: province, district_id: x[0], district_name: x[1] } }
         end
       end
@@ -110,7 +116,7 @@ class MaskStore
     nop, longitude, latitude = doc.at_css("#mapFrame").attribute("src").value.match(/locXcdn=([\d\.]*)&locYcdn=([\d\.]*)/).to_a if doc.at_css("#mapFrame")
     info["longitude"] = longitude
     info["latitude"] = latitude
-    info 
+    info
   end
 
   def new_line_strip text
@@ -145,11 +151,11 @@ class MaskStore
         info["logitude"] = office["postLon"]
         info.merge!(postoffice_info(postoffice_id: office["postId"].to_s))
         puts info.inspect
-        count += 1 
+        count += 1
       end
     end
   end
-  
+
   def postoffice_list_to_csv(filename:)
     CSV.open(filename, "w", write_headers: true, headers: MASKSTORE_HEADERS) do |csv|
       POSTOFFICE_PROVINCE_CODES.each do |province|
@@ -181,13 +187,13 @@ class MaskStore
       puts local.inspect
       current_page = 1
       last_page = 1
-      while current_page <= last_page do 
+      while current_page <= last_page do
         jsonstring = ""
         open("#{PHARMACY_LIST_URL.gsub(/:longitude/,local['longitude']).gsub(/:latitude/,local['latitude']).gsub(/:pagenumber/,current_page.to_s)}"  ) do |f|
           f.each_line{ |x| jsonstring << x  }
         end
         ph_json = JSON.parse(jsonstring)
-        last_page = ph_json["paging"]["lastPageNum"] 
+        last_page = ph_json["paging"]["lastPageNum"]
         ph_json["list"].each do |pharmacy|
           info = {}
           info["id"] = pharmacy["EMOGCODE"]
@@ -199,7 +205,7 @@ class MaskStore
           # puts info.inspect
         end
         current_page += 1
-      end 
+      end
       break
     end
   end
@@ -210,14 +216,14 @@ class MaskStore
       CSV.foreach("geolocal.csv", headers: true) do |local|
 	print count, ",", local.inspect; puts
 	current_page = last_page = 1
-	while current_page <= last_page do 
+	while current_page <= last_page do
           print current_page, ",", last_page; puts
 	  jsonstring = ""
 	  open("#{PHARMACY_LIST_URL.gsub(/:longitude/,local['longitude']).gsub(/:latitude/,local['latitude']).gsub(/:pagenumber/,current_page.to_s)}"  ) do |f|
 	    f.each_line{ |x| jsonstring << x  }
 	  end
 	  ph_json = JSON.parse(jsonstring)
-	  last_page = ph_json["paging"]["lastPageNum"] 
+	  last_page = ph_json["paging"]["lastPageNum"]
 	  ph_json["list"].each do |pharmacy|
 	    info = {}
 	    info["id"] = pharmacy["EMOGCODE"]
@@ -229,7 +235,7 @@ class MaskStore
             csv << info
 	  end
 	  current_page += 1
-	end 
+	end
         count += 1
       end
     end
@@ -270,7 +276,7 @@ class MaskStore
     geolist = {}
     File.open("geolocal.tmp") do |f|
       f.each_line do |line|
-        line.split("|")[0...-1].map{ |x| x.split(",") }.each do |y| 
+        line.split("|")[0...-1].map{ |x| x.split(",") }.each do |y|
           geolist[y[0]] = [y[1], y[2]]
         end
       end
@@ -279,7 +285,7 @@ class MaskStore
     File.open("local.lst") do |f|
       count = 1
       f.each_line do |local|
-        if geolist[local.strip] 
+        if geolist[local.strip]
           print count, ",", local.strip, ",", geolist[local.strip][1], ",", geolist[local.strip][0]
           puts
           count += 1
@@ -345,13 +351,13 @@ class MaskStore
       CSV.foreach("geolocal.csv", headers: true) do |local|
         puts local.inspect
         retry_count = 0
-        begin 
+        begin
           find_by_geo(latitude: local["latitude"], longitude: local["longitude"])["stores"].each do |store|
             csv << store
           end
         rescue Exception => e
           sleep 0.2
-          retry_count += 1 
+          retry_count += 1
           retry if retry_count < 5
           puts local["name"], e.message
         end
@@ -376,6 +382,47 @@ class MaskStore
     out
   end
 
+  def maskstores(page_no:, store_count: )
+    jsonstring = ''
+    open(MASKSTORES_URL.gsub(/:page_no/,page_no.to_s).gsub(/:store_count/, store_count.to_s)) do |f|
+      f.each_line{ |x| jsonstring << x }
+    end
+    JSON.parse(jsonstring)
+  end
+
+  def maskstore_list_to_csv(filename: )
+    CSV.open(filename, 'w', write_headers: true, headers: MASKSTORE_HEADERS) do |csv|
+      1.upto(maskstores(page_no: 1, store_count: 500)['totalPages']) do |n|
+        puts n
+        maskstores(page_no: n, store_count: 500)['storeInfos'].each do |store|
+          print '.'
+          csv << store
+        end
+        puts
+      end
+    end
+  end
+
+  def stocks(page_no:, store_count: )
+    jsonstring = ''
+    open(MASKSTORE_STOCKS_URL.gsub(/:page_no/,page_no.to_s).gsub(/:store_count/,store_count.to_s)) do |f|
+      f.each_line{ |x| jsonstring << x }
+    end
+    JSON.parse(jsonstring)
+  end
+
+  def stock_list_to_csv(filename: )
+    CSV.open(filename, 'w', write_headers: true, headers: MASKSTORE_STOCK_HEADERS) do |csv|
+      1.upto(stocks(page_no: 1, store_count: 500)['totalPages']) do |n|
+        puts n
+        stocks(page_no: n, store_count: 500)['sales'].each do |stock|
+          print '.'
+          csv << stock
+        end
+      end
+    end
+  end
+
 end
 
 if ARGV.length > 0
@@ -383,7 +430,12 @@ if ARGV.length > 0
   @maskstore.nh_hanaro_list_to_csv(filename: "maskstore-nh-hanaro.csv") if ARGV[0].include? "n"
   @maskstore.postoffice_list_to_csv(filename: "maskstore-postoffice.csv") if ARGV[0].include? "p"
   @maskstore.pharmacy_list_to_csv(input_filename: "maskstore-pharmacy-by-geo.csv", output_filename: "maskstore-pharmacy.csv") if ARGV[0].include? "h"
-  @maskstore.maskstore_geo_list_to_csv(filename: "maskstore-geo.csv") if ARGV[0].include? "m"
+  if ARGV[0].include? "m"
+    @maskstore.maskstore_geo_list_to_csv(filename: ARGV[1] || "maskstore-geo.csv")
+  end
+  if ARGV[0].include? "s"
+    @maskstore.stock_list_to_csv(filename: ARGV[1] || "stock.csv")
+  end
 else
   puts "ruby maskstore.rb n|p"
   puts "n: list nonhyup hanaro mart"
